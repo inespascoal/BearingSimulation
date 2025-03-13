@@ -56,6 +56,7 @@ You will see an interface where you can enter setpoint and duration values and t
 
 
 **5. Access the DataBase**
+
 In the terminal:
 ```bash
 sqlite3 BearingSimulations.db
