@@ -8,9 +8,9 @@ using Microsoft.Data.Sqlite;
 class Bearing
 {
     // Bearing Characteristics 
-    public double RotationSpeed { get; set; } 
-    public double StressLevel { get; set; }
+    public double RotationSpeed { get; set; }
     public double Temperature { get; set; }
+    public double StressLevel { get; set; }
 
     public Bearing(double initial_temperature = 22.0, double initial_rotationSpeed = 300, double initial_StressLevel = 0) 
     {
@@ -19,7 +19,6 @@ class Bearing
         StressLevel = initial_StressLevel;
     }
 
-    // step(setpoint, duration)
 }
 
 
@@ -40,25 +39,27 @@ class DatabaseManager
                     Simulation_ID INTEGER,
                     Timestamp TEXT,
                     RotationSpeed REAL,
-                    Temperature REAL
+                    Temperature REAL,
+                    StressLevel REAL
                 );";
             SqliteCommand cmd = new SqliteCommand(createTableQuery, conn);
             cmd.ExecuteNonQuery();
         }
     }
 
-    public void InsertSimulationData(int simulation_id, string timestamp, double rotationSpeed, double temperature)
+    public void InsertSimulationData(int simulation_id, string timestamp, double rotationSpeed, double temperature, double stresslevel)
     {
         using (SqliteConnection conn = new SqliteConnection(connectionString)) // context manager
         {
             conn.Open();
-            string insertQuery = "INSERT INTO Simulations (Simulation_ID, Timestamp, RotationSpeed, Temperature) VALUES (@simulation_id, @timestamp, @rotationSpeed, @temperature)";
+            string insertQuery = "INSERT INTO Simulations (Simulation_ID, Timestamp, RotationSpeed, Temperature, StressLevel) VALUES (@simulation_id, @timestamp, @rotationSpeed, @temperature, @stresslevel)";
             using (SqliteCommand cmd = new SqliteCommand(insertQuery, conn)) 
             {
                 cmd.Parameters.AddWithValue("@simulation_id", simulation_id);
                 cmd.Parameters.AddWithValue("@timestamp", timestamp);
                 cmd.Parameters.AddWithValue("@rotationSpeed", rotationSpeed);
                 cmd.Parameters.AddWithValue("@temperature", temperature);
+                cmd.Parameters.AddWithValue("@stresslevel", stresslevel);
                 cmd.ExecuteNonQuery();
             }
         }
@@ -94,15 +95,20 @@ class Simulation
     private DatabaseManager dbManager;
     private Bearing TestBearing;
     private DateTime Timestamp;
+    private int CurrentSimulation_ID;
 
-    public Simulation ( int[]? setpoint = null, int[]? duration= null)//double setpoint = 300, double duration = 10)
+    public Simulation ()
     {
 
         dbManager = new DatabaseManager(); // chamar basedados da simulação
-        int new_simulation_id = dbManager.GetLastSimulationID() + 1;
+        CurrentSimulation_ID = dbManager.GetLastSimulationID() + 1;
 
         TestBearing = new Bearing(); // criar novo bearing
         Timestamp = DateTime.UtcNow;
+    }
+
+    public void run( int[]? setpoint = null, int[]? duration= null)
+    {
 
         // temperature variation 
         /*
@@ -140,7 +146,7 @@ class Simulation
             double step_time = 0;
             
             Console.WriteLine("\nResultados da Simulação:");
-            Console.WriteLine("Timestamp\t\tRPM\tTemperatura");
+            Console.WriteLine("Timestamp\t\tRPM\tTemperature\tStress");
 
             while (step_time < duration[i])
             {
@@ -151,8 +157,8 @@ class Simulation
                 string timestampString = Timestamp.AddSeconds(step_time).ToString("yyyy-MM-dd HH:mm:ss");
 
 
-                Console.WriteLine($"{timestampString}\t{TestBearing.RotationSpeed:F2}\t{TestBearing.Temperature:F2}°C");
-                dbManager.InsertSimulationData(new_simulation_id, timestampString, TestBearing.RotationSpeed, TestBearing.Temperature);
+                Console.WriteLine($"{timestampString}\t{TestBearing.RotationSpeed:F2}\t{TestBearing.Temperature:F2}°C\t{TestBearing.StressLevel:F2}Pa");
+                dbManager.InsertSimulationData(CurrentSimulation_ID, timestampString, TestBearing.RotationSpeed, TestBearing.Temperature, TestBearing.StressLevel);
                 step_time += step_time_size;
 
             }
@@ -168,6 +174,7 @@ class Program
     {
 
         Simulation TestSimulation = new Simulation();
+        TestSimulation.run();
 
     }
 }
