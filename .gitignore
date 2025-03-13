@@ -1,0 +1,5 @@
+*.db
+*.sln
+bin/
+net9.0/
+obj/
