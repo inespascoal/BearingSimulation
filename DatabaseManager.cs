@@ -34,9 +34,9 @@ class DatabaseManager
             {
                 cmd.Parameters.AddWithValue("@simulation_id", simulation_id);
                 cmd.Parameters.AddWithValue("@timestamp", timestamp);
-                cmd.Parameters.AddWithValue("@rotationSpeed", rotationSpeed);
-                cmd.Parameters.AddWithValue("@temperature", temperature);
-                cmd.Parameters.AddWithValue("@stresslevel", stresslevel);
+                cmd.Parameters.AddWithValue("@rotationSpeed",(int)Math.Round(rotationSpeed,0));
+                cmd.Parameters.AddWithValue("@temperature", Math.Round(temperature,2));
+                cmd.Parameters.AddWithValue("@stresslevel", (int)Math.Round(stresslevel,0));
                 cmd.ExecuteNonQuery();
             }
         }

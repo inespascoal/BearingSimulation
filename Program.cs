@@ -17,36 +17,36 @@ app.MapPost("/run", async (HttpContext context) =>
     
         var request = await JsonSerializer.DeserializeAsync<SimulationRequest>(context.Request.Body);
         
-        if (request == null || request.Setpoint == null || request.Duration == null)
+        if (request == null)
         {
-            return Results.Problem("Erro: Dados inválidos recebidos.");
+            return Results.Problem("Error: Invalid data.");
         }
         if (request.Setpoint == null || request.Setpoint[0] == 0)
         {
             request.Setpoint = new int[] { 100, 200 };
-            Console.WriteLine("Error");
+            //Console.WriteLine("Error");
         }
 
         if (request.Duration == null || request.Duration[0] == 0)
         {
             request.Duration = new int[] { 10, 20 };
-            Console.WriteLine("Error");
+            //Console.WriteLine("Error");
         }
 
         if (request.Setpoint.Length != request.Duration.Length )
         {
-            Console.WriteLine("Error");
+            Console.WriteLine("Error: The setpoint and duration must have the same length");
         }
 
         var simulation = new Simulation();
         simulation.run(request.Setpoint, request.Duration);
         
         
-        return Results.Ok("Simulação iniciada!");
+        return Results.Ok("Initialised simulation!");
     }
     catch (Exception ex)
     {
-        return Results.Problem("Erro: " + ex.Message);
+        return Results.Problem("Error: " + ex.Message);
     }
 });
 
@@ -57,18 +57,3 @@ class SimulationRequest
     public int[]? Setpoint { get; set; }
     public int[]? Duration { get; set; }
 }
-
-
-
-/*
-class Program
-{
-    static void Main()
-    {
-
-        Simulation TestSimulation = new Simulation();
-        TestSimulation.run();
-
-    }
-}
-*/

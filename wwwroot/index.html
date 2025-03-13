@@ -21,14 +21,10 @@
                 });
 
                 if (response.ok) {
-                    alert("Simulação iniciada! Verifique os resultados na base de dados.");
-                } else {
-                    const errorMsg = await response.text();
-                    alert("Erro ao iniciar a simulação: " + errorMsg);
-                }
+                    alert("Simulation started! Check the results in the database.");
+                } 
             } catch (error) {
                 console.error("Erro:", error);
-                alert("Erro ao conectar com o servidor.");
             }
         }
     </script>
@@ -36,10 +32,10 @@
 <body>
     <h1>Bearing Simulation</h1>
     
-    <label for="setpoint">Setpoint (comma separated):</label>
+    <label for="setpoint">Setpoint (RPM):</label>
     <input type="text" id="setpoint" placeholder="100,200,300"><br><br>
 
-    <label for="duration">Duration (comma separated):</label>
+    <label for="duration">Duration (s):</label>
     <input type="text" id="duration" placeholder="10,20,30"><br><br>
 
     <button onclick="runSimulation()">Run Simulation</button>
