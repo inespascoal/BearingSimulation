@@ -1,173 +1,66 @@
 ﻿
-using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.ComponentModel.DataAnnotations;
-using Microsoft.Data.Sqlite;
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
+using System.Text.Json;
 
-class Bearing
+var builder = WebApplication.CreateBuilder(args);
+var app = builder.Build();
+
+app.UseDefaultFiles(); 
+app.UseStaticFiles();  
+
+app.MapPost("/run", async (HttpContext context) =>
 {
-    // Bearing Characteristics 
-    public double RotationSpeed { get; set; }
-    public double Temperature { get; set; }
-    public double StressLevel { get; set; }
-
-    public Bearing(double initial_temperature = 22.0, double initial_rotationSpeed = 300, double initial_StressLevel = 0) 
+    try
     {
-        Temperature = initial_temperature;
-        RotationSpeed = initial_rotationSpeed;
-        StressLevel = initial_StressLevel;
-    }
-
-}
-
-
-
-
-class DatabaseManager
-{
-    private string connectionString = "Data Source=BearingSimulations.db;";
-
-    public DatabaseManager()
-    {
-        using (SqliteConnection conn = new SqliteConnection(connectionString))
-        {
-            conn.Open();
-            string createTableQuery = @"
-                CREATE TABLE IF NOT EXISTS Simulations (
-                    Register_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-                    Simulation_ID INTEGER,
-                    Timestamp TEXT,
-                    RotationSpeed REAL,
-                    Temperature REAL,
-                    StressLevel REAL
-                );";
-            SqliteCommand cmd = new SqliteCommand(createTableQuery, conn);
-            cmd.ExecuteNonQuery();
-        }
-    }
-
-    public void InsertSimulationData(int simulation_id, string timestamp, double rotationSpeed, double temperature, double stresslevel)
-    {
-        using (SqliteConnection conn = new SqliteConnection(connectionString)) // context manager
-        {
-            conn.Open();
-            string insertQuery = "INSERT INTO Simulations (Simulation_ID, Timestamp, RotationSpeed, Temperature, StressLevel) VALUES (@simulation_id, @timestamp, @rotationSpeed, @temperature, @stresslevel)";
-            using (SqliteCommand cmd = new SqliteCommand(insertQuery, conn)) 
-            {
-                cmd.Parameters.AddWithValue("@simulation_id", simulation_id);
-                cmd.Parameters.AddWithValue("@timestamp", timestamp);
-                cmd.Parameters.AddWithValue("@rotationSpeed", rotationSpeed);
-                cmd.Parameters.AddWithValue("@temperature", temperature);
-                cmd.Parameters.AddWithValue("@stresslevel", stresslevel);
-                cmd.ExecuteNonQuery();
-            }
-        }
-    }
-    public int GetLastSimulationID()
-    {
-        using (SqliteConnection conn = new SqliteConnection(connectionString)) // context manager
-        {
-            conn.Open();
-            string insertQuery = "SELECT Simulation_ID FROM Simulations ORDER BY Register_ID DESC LIMIT 1";
-            using (SqliteCommand cmd = new SqliteCommand(insertQuery, conn)) 
-            {
-                var result = cmd.ExecuteScalar();
-                if (result != null && int.TryParse(result.ToString(), out int lastID))
-                {
-                    return lastID; // Return the retrieved ID
-                }
-                else
-                {
-                    return -1; // Return -1 if no ID is found
-                }
-            }
-        }
-    }
-}
-
-
-
-
-
-class Simulation
-{
-    private DatabaseManager dbManager;
-    private Bearing TestBearing;
-    private DateTime Timestamp;
-    private int CurrentSimulation_ID;
-
-    public Simulation ()
-    {
-
-        dbManager = new DatabaseManager(); // chamar basedados da simulação
-        CurrentSimulation_ID = dbManager.GetLastSimulationID() + 1;
-
-        TestBearing = new Bearing(); // criar novo bearing
-        Timestamp = DateTime.UtcNow;
-    }
-
-    public void run( int[]? setpoint = null, int[]? duration= null)
-    {
-
-        // temperature variation 
-        /*
-        double max_temperature = 80.0;
-        double k = 0.05;
-        double alpha = 0.0001;
-        */
+    
+        var request = await JsonSerializer.DeserializeAsync<SimulationRequest>(context.Request.Body);
         
-        // If arrays == null, set default values
-        if (setpoint == null)
+        if (request == null || request.Setpoint == null || request.Duration == null)
         {
-            setpoint = new int[] { 100, 200 };
+            return Results.Problem("Erro: Dados inválidos recebidos.");
+        }
+        if (request.Setpoint == null || request.Setpoint[0] == 0)
+        {
+            request.Setpoint = new int[] { 100, 200 };
             Console.WriteLine("Error");
         }
 
-        if (duration == null)
+        if (request.Duration == null || request.Duration[0] == 0)
         {
-            duration = new int[] { 10, 20 };
+            request.Duration = new int[] { 10, 20 };
             Console.WriteLine("Error");
         }
 
-        if (setpoint.Length != duration.Length )
+        if (request.Setpoint.Length != request.Duration.Length )
         {
             Console.WriteLine("Error");
         }
 
-        for (int i = 0; i < setpoint.Length; i++)
-        {
+        var simulation = new Simulation();
+        simulation.run(request.Setpoint, request.Duration);
         
-            // random variation for rotation speed meeasurement
-            Random variations = new Random();
-
-            double period = 20;
-            double step_time_size = duration[i]/period;
-            double step_time = 0;
-            
-            Console.WriteLine("\nResultados da Simulação:");
-            Console.WriteLine("Timestamp\t\tRPM\tTemperature\tStress");
-
-            while (step_time < duration[i])
-            {
-                TestBearing.Temperature = duration[i]* setpoint[i] / 4;  //max_temperature - (max_temperature - TestBearing.Temperature) * Math.Exp(-k * step_time) + alpha * Math.Pow(TestBearing.RotationSpeed, 2);
-                TestBearing.StressLevel = duration[i]* setpoint[i] / 2;
-                TestBearing.RotationSpeed = setpoint[i] + (variations.NextDouble() * 4 - 2); // variation of +/- 2 rpm
-                
-                string timestampString = Timestamp.AddSeconds(step_time).ToString("yyyy-MM-dd HH:mm:ss");
-
-
-                Console.WriteLine($"{timestampString}\t{TestBearing.RotationSpeed:F2}\t{TestBearing.Temperature:F2}°C\t{TestBearing.StressLevel:F2}Pa");
-                dbManager.InsertSimulationData(CurrentSimulation_ID, timestampString, TestBearing.RotationSpeed, TestBearing.Temperature, TestBearing.StressLevel);
-                step_time += step_time_size;
-
-            }
-        }
+        
+        return Results.Ok("Simulação iniciada!");
     }
+    catch (Exception ex)
+    {
+        return Results.Problem("Erro: " + ex.Message);
+    }
+});
+
+app.Run();
+
+class SimulationRequest
+{
+    public int[]? Setpoint { get; set; }
+    public int[]? Duration { get; set; }
 }
 
 
 
+/*
 class Program
 {
     static void Main()
@@ -178,4 +71,4 @@ class Program
 
     }
 }
-
+*/

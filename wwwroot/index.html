@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bearing Simulation</title>
+    <script>
+        async function runSimulation() {
+            const setpointInput = document.getElementById("setpoint").value;
+            const durationInput = document.getElementById("duration").value;
+
+            // Converte strings para arrays numéricos
+            const setpointArray = setpointInput.split(",").map(Number);
+            const durationArray = durationInput.split(",").map(Number);
+
+            try {
+                const response = await fetch("/run", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ Setpoint: setpointArray, Duration: durationArray })
+                });
+
+                if (response.ok) {
+                    alert("Simulação iniciada! Verifique os resultados na base de dados.");
+                } else {
+                    const errorMsg = await response.text();
+                    alert("Erro ao iniciar a simulação: " + errorMsg);
+                }
+            } catch (error) {
+                console.error("Erro:", error);
+                alert("Erro ao conectar com o servidor.");
+            }
+        }
+    </script>
+</head>
+<body>
+    <h1>Bearing Simulation</h1>
+    
+    <label for="setpoint">Setpoint (comma separated):</label>
+    <input type="text" id="setpoint" placeholder="100,200,300"><br><br>
+
+    <label for="duration">Duration (comma separated):</label>
+    <input type="text" id="duration" placeholder="10,20,30"><br><br>
+
+    <button onclick="runSimulation()">Run Simulation</button>
+</body>
+</html>
